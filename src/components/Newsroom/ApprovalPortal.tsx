@@ -9,9 +9,19 @@ import {
   Modal,
   InputAdornment,
   useTheme,
-  useMediaQuery,
   IconButton,
   Tooltip,
+  Select,
+  MenuItem,
+  ToggleButtonGroup,
+  ToggleButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
 } from "@mui/material";
 import React, { useState } from "react";
 import {
@@ -22,6 +32,13 @@ import {
   Save,
   X,
   Lock,
+  LayoutGrid,
+  List,
+  Eye,
+  RotateCcw,
+  Sparkles,
+  User,
+  Clock,
 } from "lucide-react";
 import { useNewsroom } from "@/providers/NewsroomProvider";
 import { useThemeMode } from "@/providers/MuiProvider";
@@ -42,8 +59,12 @@ const ApprovalPortal: React.FC = () => {
   const { mode } = useThemeMode();
   const theme = useTheme();
 
+  const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StoryStatus | "all">("all");
+  const [categoryFilter, setCategoryFilter] = useState<StoryCategory | "all">("all");
+  const [dateFilter, setDateFilter] = useState<"today" | "yesterday" | "week" | "month" | "all">("all");
+
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -57,7 +78,31 @@ const ApprovalPortal: React.FC = () => {
       s.reporter.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.category.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || s.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesCategory = categoryFilter === "all" || s.category === categoryFilter;
+
+    // Date Filter Logic (Default: All Time)
+    let matchesDate = true;
+    const storyDate = new Date(s.createdAt);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const lastWeek = new Date(today);
+    lastWeek.setDate(lastWeek.getDate() - 7);
+    const lastMonth = new Date(today);
+    lastMonth.setDate(lastMonth.getDate() - 30);
+
+    if (dateFilter === "today") {
+      matchesDate = storyDate >= today;
+    } else if (dateFilter === "yesterday") {
+      matchesDate = storyDate >= yesterday && storyDate < today;
+    } else if (dateFilter === "week") {
+      matchesDate = storyDate >= lastWeek;
+    } else if (dateFilter === "month") {
+      matchesDate = storyDate >= lastMonth;
+    }
+
+    return matchesSearch && matchesStatus && matchesCategory && matchesDate;
   });
 
   const openStoryModal = (story: Story) => {
@@ -69,20 +114,28 @@ const ApprovalPortal: React.FC = () => {
     setModalOpen(true);
   };
 
-  const handleApprove = () => {
-    if (!selectedStory || !permissions.canApproveNews) return;
-    updateStoryStatus(selectedStory.id, "approved");
-    addActivity("approved", "Editor", selectedStory.title, "Story approved for publication");
-    setModalOpen(false);
-    setSelectedStory(null);
+  const handleApprove = (storyId?: string, title?: string) => {
+    const targetId = storyId || selectedStory?.id;
+    const targetTitle = title || selectedStory?.title;
+    if (!targetId || !permissions.canApproveNews) return;
+    updateStoryStatus(targetId, "approved");
+    addActivity("approved", "Editor", targetTitle || "Story", "Story approved for publication");
+    if (selectedStory?.id === targetId) {
+      setModalOpen(false);
+      setSelectedStory(null);
+    }
   };
 
-  const handleReject = () => {
-    if (!selectedStory || !permissions.canRejectNews) return;
-    updateStoryStatus(selectedStory.id, "rejected");
-    addActivity("rejected", "Editor", selectedStory.title, "Story rejected");
-    setModalOpen(false);
-    setSelectedStory(null);
+  const handleReject = (storyId?: string, title?: string) => {
+    const targetId = storyId || selectedStory?.id;
+    const targetTitle = title || selectedStory?.title;
+    if (!targetId || !permissions.canRejectNews) return;
+    updateStoryStatus(targetId, "rejected");
+    addActivity("rejected", "Editor", targetTitle || "Story", "Story rejected from Approval Portal");
+    if (selectedStory?.id === targetId) {
+      setModalOpen(false);
+      setSelectedStory(null);
+    }
   };
 
   const handleSave = () => {
@@ -98,21 +151,58 @@ const ApprovalPortal: React.FC = () => {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
-      {/* Header */}
+      {/* Header with Title, Count & View Switcher */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1.5 }}>
-        <Typography sx={{ fontWeight: 600, fontSize: "1.125rem" }}>
-          News Approval Portal
-        </Typography>
-        <Typography sx={{ fontSize: "0.8125rem", color: "text.secondary" }}>
-          {filteredStories.length} stories
-        </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+          <Typography sx={{ fontWeight: 600, fontSize: "1.125rem" }}>
+            News Approval Portal
+          </Typography>
+          <Typography sx={{ fontSize: "0.8125rem", color: "text.secondary" }}>
+            {filteredStories.length} stories
+          </Typography>
+        </Box>
+
+        {/* Cards vs List View Toggle CTA */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Typography sx={{ fontSize: "0.75rem", color: "text.secondary", fontWeight: 500 }}>
+            View:
+          </Typography>
+          <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            onChange={(_, val) => val && setViewMode(val)}
+            size="small"
+            sx={{
+              height: 36,
+              "& .MuiToggleButton-root": {
+                px: 1.25,
+                py: 0.5,
+                borderRadius: "8px",
+                borderColor: "divider",
+                "&.Mui-selected": {
+                  backgroundColor: mode === "light" ? "#000" : "#fff",
+                  color: mode === "light" ? "#fff" : "#000",
+                  "&:hover": { backgroundColor: mode === "light" ? "#222" : "#eee" },
+                },
+              },
+            }}
+          >
+            <ToggleButton value="cards">
+              <Tooltip title="Cards View"><Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}><LayoutGrid size={15} /><Typography sx={{ fontSize: "0.75rem", textTransform: "none", fontWeight: 600 }}>Cards</Typography></Box></Tooltip>
+            </ToggleButton>
+            <ToggleButton value="list">
+              <Tooltip title="List View"><Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}><List size={15} /><Typography sx={{ fontSize: "0.75rem", textTransform: "none", fontWeight: 600 }}>List</Typography></Box></Tooltip>
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
       </Box>
 
-      {/* Search & Filters */}
-      <Box sx={{ backgroundColor: "background.paper", borderRadius: "12px", p: 2, boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.03)", border: "1px solid", borderColor: "divider" }}>
-        <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap", alignItems: "center" }}>
+      {/* Search & Dropdown Filters Toolbar */}
+      <Box sx={{ backgroundColor: "background.paper", borderRadius: "12px", p: 1.75, boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.03)", border: "1px solid", borderColor: "divider" }}>
+        <Box sx={{ display: "flex", gap: 1.25, flexWrap: "wrap", alignItems: "center" }}>
+          {/* Search Bar */}
           <TextField
-            placeholder="Search stories..."
+            placeholder="Search stories by headline, reporter, category..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             size="small"
@@ -123,111 +213,300 @@ const ApprovalPortal: React.FC = () => {
                     <Search size={16} style={{ color: "#6D6E6F" }} />
                   </InputAdornment>
                 ),
+                endAdornment: searchQuery ? (
+                  <InputAdornment position="end">
+                    <X size={14} style={{ cursor: "pointer", color: "#999" }} onClick={() => setSearchQuery("")} />
+                  </InputAdornment>
+                ) : null,
               },
             }}
             sx={{
               flex: 1,
-              minWidth: { xs: "100%", sm: 200 },
-              "& .MuiOutlinedInput-root": { borderRadius: "12px", fontSize: "0.8125rem" },
+              minWidth: { xs: "100%", sm: 220 },
+              "& .MuiOutlinedInput-root": { borderRadius: "10px", fontSize: "0.8125rem", height: 38 },
             }}
           />
-          <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap" }}>
-            {(["all", "pending_approval", "pending_review", "approved", "rejected"] as const).map((status) => (
-              <Chip
-                key={status}
-                label={status === "all" ? "All" : status.replace("_", " ")}
+
+          {/* Filter Dropdowns */}
+          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", alignItems: "center" }}>
+            {/* Date Filter Dropdown (Default: All Time) */}
+            <Select
+              size="small"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value as any)}
+              displayEmpty
+              sx={{
+                borderRadius: "10px",
+                fontSize: "0.8125rem",
+                height: 38,
+                minWidth: 130,
+                backgroundColor: dateFilter !== "all" ? (mode === "light" ? "#f3f4f6" : "#2a2a2a") : "transparent",
+                fontWeight: 600,
+              }}
+            >
+              <MenuItem value="all" sx={{ fontSize: "0.8125rem" }}>📅 All Time</MenuItem>
+              <MenuItem value="today" sx={{ fontSize: "0.8125rem" }}>Today</MenuItem>
+              <MenuItem value="yesterday" sx={{ fontSize: "0.8125rem" }}>Yesterday</MenuItem>
+              <MenuItem value="week" sx={{ fontSize: "0.8125rem" }}>Last 7 Days</MenuItem>
+              <MenuItem value="month" sx={{ fontSize: "0.8125rem" }}>Last 30 Days</MenuItem>
+            </Select>
+
+            {/* Status Filter Dropdown */}
+            <Select
+              size="small"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as StoryStatus | "all")}
+              displayEmpty
+              sx={{
+                borderRadius: "10px",
+                fontSize: "0.8125rem",
+                height: 38,
+                minWidth: 150,
+                backgroundColor: statusFilter !== "all" ? (mode === "light" ? "#f3f4f6" : "#2a2a2a") : "transparent",
+                fontWeight: statusFilter !== "all" ? 600 : 400,
+              }}
+            >
+              <MenuItem value="all" sx={{ fontSize: "0.8125rem" }}>All Statuses</MenuItem>
+              <MenuItem value="pending_approval" sx={{ fontSize: "0.8125rem" }}>Pending Approval</MenuItem>
+              <MenuItem value="pending_review" sx={{ fontSize: "0.8125rem" }}>Pending Review</MenuItem>
+              <MenuItem value="approved" sx={{ fontSize: "0.8125rem" }}>Approved</MenuItem>
+              <MenuItem value="rejected" sx={{ fontSize: "0.8125rem" }}>Rejected</MenuItem>
+            </Select>
+
+            {/* Category Dropdown */}
+            <Select
+              size="small"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value as StoryCategory | "all")}
+              displayEmpty
+              sx={{
+                borderRadius: "10px",
+                fontSize: "0.8125rem",
+                height: 38,
+                minWidth: 140,
+                backgroundColor: categoryFilter !== "all" ? (mode === "light" ? "#f3f4f6" : "#2a2a2a") : "transparent",
+                fontWeight: categoryFilter !== "all" ? 600 : 400,
+              }}
+            >
+              <MenuItem value="all" sx={{ fontSize: "0.8125rem" }}>All Categories</MenuItem>
+              <MenuItem value="Politics" sx={{ fontSize: "0.8125rem" }}>Politics</MenuItem>
+              <MenuItem value="Sports" sx={{ fontSize: "0.8125rem" }}>Sports</MenuItem>
+              <MenuItem value="Business" sx={{ fontSize: "0.8125rem" }}>Business</MenuItem>
+              <MenuItem value="Technology" sx={{ fontSize: "0.8125rem" }}>Technology</MenuItem>
+              <MenuItem value="Entertainment" sx={{ fontSize: "0.8125rem" }}>Entertainment</MenuItem>
+              <MenuItem value="Health" sx={{ fontSize: "0.8125rem" }}>Health</MenuItem>
+              <MenuItem value="International" sx={{ fontSize: "0.8125rem" }}>International</MenuItem>
+            </Select>
+
+            {(statusFilter !== "all" || categoryFilter !== "all" || dateFilter !== "all" || searchQuery) && (
+              <Button
                 size="small"
-                onClick={() => setStatusFilter(status)}
-                sx={{
-                  fontSize: "0.6875rem",
-                  height: 26,
-                  fontWeight: statusFilter === status ? 600 : 400,
-                  backgroundColor: statusFilter === status ? "text.primary" : "action.hover",
-                  color: statusFilter === status ? (mode === "light" ? "#fff" : "#000") : "text.secondary",
-                  borderRadius: "8px",
-                  textTransform: "capitalize",
+                onClick={() => {
+                  setStatusFilter("all");
+                  setCategoryFilter("all");
+                  setDateFilter("all");
+                  setSearchQuery("");
                 }}
-              />
-            ))}
+                startIcon={<RotateCcw size={13} />}
+                sx={{ textTransform: "none", fontSize: "0.75rem", height: 38, borderRadius: "10px", color: "error.main", px: 1.25 }}
+              >
+                Reset
+              </Button>
+            )}
           </Box>
         </Box>
       </Box>
 
-      {/* Story Table */}
-      <Box sx={{ backgroundColor: "background.paper", borderRadius: "12px", overflow: "hidden", boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.03)", border: "1px solid", borderColor: "divider" }}>
-        <Box sx={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid " + (mode === "light" ? "#E5E7EB" : "#333") }}>
-                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "0.75rem", fontWeight: 700, color: mode === "light" ? "#6D6E6F" : "#b0b0b0" }}>Story</th>
-                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "0.75rem", fontWeight: 700, color: mode === "light" ? "#6D6E6F" : "#b0b0b0" }}>Reporter</th>
-                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "0.75rem", fontWeight: 700, color: mode === "light" ? "#6D6E6F" : "#b0b0b0" }}>Category</th>
-                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "0.75rem", fontWeight: 700, color: mode === "light" ? "#6D6E6F" : "#b0b0b0" }}>Status</th>
-                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: "0.75rem", fontWeight: 700, color: mode === "light" ? "#6D6E6F" : "#b0b0b0" }}>Date</th>
-                <th style={{ padding: "12px 14px", textAlign: "center", fontSize: "0.75rem", fontWeight: 700, color: mode === "light" ? "#6D6E6F" : "#b0b0b0" }}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredStories.map((story) => (
-                <tr
-                  key={story.id}
-                  style={{
-                    borderBottom: "1px solid " + (mode === "light" ? "#f0f0f0" : "#222"),
-                    cursor: "pointer",
-                    transition: "background-color 0.15s",
+      {/* VIEW MODE 1: CARDS VIEW */}
+      {viewMode === "cards" && (
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }, gap: 2 }}>
+          {filteredStories.map((story) => (
+            <Box
+              key={story.id}
+              sx={{
+                backgroundColor: "background.paper",
+                borderRadius: "12px",
+                p: 2,
+                boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.03)",
+                border: "1px solid",
+                borderColor: "divider",
+                display: "flex",
+                flexDirection: "column",
+                gap: 1.5,
+                cursor: "pointer",
+                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                "&:hover": { transform: "translateY(-2px)", boxShadow: "0px 8px 24px rgba(0, 0, 0, 0.08)" },
+              }}
+              onClick={() => openStoryModal(story)}
+            >
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 1 }}>
+                <Typography sx={{ fontWeight: 600, fontSize: "0.875rem", lineHeight: 1.35, flex: 1 }}>
+                  {story.title}
+                </Typography>
+                <Chip
+                  label={story.status.replace("_", " ")}
+                  size="small"
+                  sx={{
+                    fontSize: "0.625rem",
+                    height: 22,
+                    fontWeight: 600,
+                    backgroundColor: STATUS_COLORS[story.status].bg,
+                    color: STATUS_COLORS[story.status].text,
+                    borderRadius: "6px",
+                    textTransform: "capitalize",
+                    flexShrink: 0,
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = mode === "light" ? "#f9fafb" : "#1a1a1a")}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                  onClick={() => openStoryModal(story)}
+                />
+              </Box>
+
+              <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap" }}>
+                <Chip
+                  label={story.category}
+                  size="small"
+                  sx={{ fontSize: "0.625rem", height: 20, backgroundColor: "action.hover", color: "text.secondary", borderRadius: "6px" }}
+                />
+                <Chip
+                  label={story.priority}
+                  size="small"
+                  sx={{ fontSize: "0.625rem", height: 20, fontWeight: 600, backgroundColor: "action.selected" }}
+                />
+              </Box>
+
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <Typography sx={{ fontSize: "0.75rem", color: "text.secondary", fontWeight: 500 }}>
+                  ✍️ {story.reporter}
+                </Typography>
+                <Typography sx={{ fontSize: "0.6875rem", color: "text.secondary" }}>
+                  {new Date(story.createdAt).toLocaleDateString()}
+                </Typography>
+              </Box>
+
+              {/* Approval Actions: Approve & Reject */}
+              <Box
+                sx={{ display: "flex", gap: 1, mt: "auto", pt: 1 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="success"
+                  disabled={!permissions.canApproveNews || story.status === "approved"}
+                  onClick={() => handleApprove(story.id, story.title)}
+                  startIcon={<CheckCircle size={14} />}
+                  sx={{ flex: 1, borderRadius: "8px", textTransform: "none", fontSize: "0.75rem", fontWeight: 600 }}
                 >
-                  <td style={{ padding: "12px 14px", fontSize: "0.8125rem", fontWeight: 500, maxWidth: 300 }}>
-                    <Box sx={{ display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                      {story.title}
-                    </Box>
-                  </td>
-                  <td style={{ padding: "12px 14px", fontSize: "0.8125rem", color: mode === "light" ? "#6D6E6F" : "#b0b0b0" }}>{story.reporter}</td>
-                  <td style={{ padding: "12px 14px" }}>
-                    <Chip label={story.category} size="small" sx={{ fontSize: "0.625rem", height: 20, backgroundColor: "action.hover", borderRadius: "6px" }} />
-                  </td>
-                  <td style={{ padding: "12px 14px" }}>
+                  {story.status === "approved" ? "Approved" : "Approve & Publish"}
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="error"
+                  disabled={!permissions.canRejectNews || story.status === "rejected"}
+                  onClick={() => handleReject(story.id, story.title)}
+                  startIcon={<XCircle size={14} />}
+                  sx={{ borderRadius: "8px", textTransform: "none", fontSize: "0.75rem", px: 1.25 }}
+                >
+                  Reject
+                </Button>
+                <IconButton
+                  size="small"
+                  onClick={() => openStoryModal(story)}
+                  sx={{ border: "1px solid", borderColor: "divider", borderRadius: "8px" }}
+                >
+                  <Eye size={15} />
+                </IconButton>
+              </Box>
+            </Box>
+          ))}
+        </Box>
+      )}
+
+      {/* VIEW MODE 2: LIST VIEW TABLE */}
+      {viewMode === "list" && (
+        <TableContainer component={Paper} sx={{ borderRadius: "12px", border: "1px solid", borderColor: "divider", boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.03)" }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ backgroundColor: mode === "light" ? "#f9fafb" : "#1a1a1a" }}>
+                <TableCell sx={{ fontWeight: 700, fontSize: "0.75rem" }}>Headline / Story</TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: "0.75rem" }}>Reporter</TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: "0.75rem" }}>Category</TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: "0.75rem" }}>Status</TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: "0.75rem" }}>Date</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.75rem" }}>Approval Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredStories.map((story) => (
+                <TableRow
+                  key={story.id}
+                  hover
+                  onClick={() => openStoryModal(story)}
+                  sx={{ cursor: "pointer" }}
+                >
+                  <TableCell sx={{ fontWeight: 600, fontSize: "0.8125rem", maxWidth: 300 }}>
+                    {story.title}
+                  </TableCell>
+                  <TableCell sx={{ fontSize: "0.8125rem" }}>{story.reporter}</TableCell>
+                  <TableCell sx={{ fontSize: "0.75rem" }}>
+                    <Chip label={story.category} size="small" sx={{ fontSize: "0.65rem", height: 20 }} />
+                  </TableCell>
+                  <TableCell>
                     <Chip
                       label={story.status.replace("_", " ")}
                       size="small"
                       sx={{
-                        fontSize: "0.625rem",
-                        height: 22,
+                        fontSize: "0.65rem",
+                        height: 20,
                         fontWeight: 600,
                         backgroundColor: STATUS_COLORS[story.status].bg,
                         color: STATUS_COLORS[story.status].text,
-                        borderRadius: "6px",
-                        textTransform: "capitalize",
                       }}
                     />
-                  </td>
-                  <td style={{ padding: "12px 14px", fontSize: "0.75rem", color: mode === "light" ? "#6D6E6F" : "#b0b0b0" }}>
+                  </TableCell>
+                  <TableCell sx={{ fontSize: "0.75rem", color: "text.secondary" }}>
                     {new Date(story.createdAt).toLocaleDateString()}
-                  </td>
-                  <td style={{ padding: "12px 14px", textAlign: "center" }}>
-                    <Button
-                      size="small"
-                      sx={{
-                        fontSize: "0.75rem",
-                        fontWeight: 600,
-                        textTransform: "none",
-                        color: "text.primary",
-                        "&:hover": { backgroundColor: "action.hover" },
-                      }}
-                      onClick={(e) => { e.stopPropagation(); openStoryModal(story); }}
-                    >
-                      Review
-                    </Button>
-                  </td>
-                </tr>
+                  </TableCell>
+                  <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                    <Box sx={{ display: "flex", gap: 0.75, justifyContent: "flex-end", alignItems: "center" }}>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        color="success"
+                        disabled={!permissions.canApproveNews || story.status === "approved"}
+                        onClick={() => handleApprove(story.id, story.title)}
+                        startIcon={<CheckCircle size={13} />}
+                        sx={{ borderRadius: "6px", textTransform: "none", fontSize: "0.7rem", py: 0.25, px: 1 }}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        disabled={!permissions.canRejectNews || story.status === "rejected"}
+                        onClick={() => handleReject(story.id, story.title)}
+                        startIcon={<XCircle size={13} />}
+                        sx={{ borderRadius: "6px", textTransform: "none", fontSize: "0.7rem", py: 0.25, px: 1 }}
+                      >
+                        Reject
+                      </Button>
+                      <IconButton size="small" onClick={() => openStoryModal(story)}>
+                        <Eye size={15} />
+                      </IconButton>
+                    </Box>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
+      {filteredStories.length === 0 && (
+        <Box sx={{ textAlign: "center", py: 6, color: "text.secondary", backgroundColor: "background.paper", borderRadius: "12px" }}>
+          <Typography sx={{ fontSize: "0.875rem" }}>No stories match your filters</Typography>
         </Box>
-      </Box>
+      )}
 
       {/* Approval Modal */}
       <Modal open={modalOpen} onClose={() => { setModalOpen(false); setSelectedStory(null); setIsEditing(false); }}>
@@ -334,134 +613,54 @@ const ApprovalPortal: React.FC = () => {
                       sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.8125rem" } }}
                     />
                   ) : (
-                    <Typography sx={{ fontSize: "0.8125rem", lineHeight: 1.6, color: "text.primary" }}>
+                    <Typography sx={{ fontSize: "0.8125rem", color: "text.secondary" }}>
                       {selectedStory.aiSummary}
                     </Typography>
                   )}
                 </Box>
-
-                <Box sx={{ p: 2, backgroundColor: mode === "light" ? "#f0f0ff" : "#1a1a2e", borderRadius: "8px" }}>
-                  <Typography sx={{ fontWeight: 600, fontSize: "0.8125rem", mb: 0.5, color: "text.secondary" }}>
-                    AI Suggested Headline
-                  </Typography>
-                  <Typography sx={{ fontSize: "0.875rem", fontWeight: 500, fontStyle: "italic", color: "text.primary" }}>
-                    {selectedStory.aiSuggestedHeadline}
-                  </Typography>
-                </Box>
               </Box>
 
-              {/* Modal Footer */}
-              <Box sx={{ p: { xs: 2, sm: 3 }, pt: 2, borderTop: "1px solid", borderColor: "divider", display: "flex", gap: 1.5, justifyContent: "flex-end", flexWrap: "wrap" }}>
+              {/* Modal Actions */}
+              <Box sx={{ p: { xs: 2, sm: 3 }, pt: 2, borderTop: "1px solid", borderColor: "divider", display: "flex", gap: 1.5, justifyContent: "flex-end" }}>
                 {isEditing ? (
-                  <>
-                    <Tooltip title={!permissions.canEditContent ? "No permission" : ""}>
-                      <Box>
-                        <Button
-                          variant="contained"
-                          startIcon={<Save size={14} />}
-                          onClick={handleSave}
-                          disabled={!permissions.canEditContent}
-                          sx={{
-                            backgroundColor: "#3498db",
-                            color: "#fff",
-                            borderRadius: "8px",
-                            textTransform: "none",
-                            fontWeight: 600,
-                            fontSize: "0.8125rem",
-                            "&:hover": { backgroundColor: "#2980b9" },
-                          }}
-                        >
-                          Save Changes
-                        </Button>
-                      </Box>
-                    </Tooltip>
+                  <Button variant="contained" onClick={handleSave} startIcon={<Save size={16} />} sx={{ borderRadius: "8px" }}>
+                    Save Changes
+                  </Button>
+                ) : (
+                  permissions.canEditContent && (
+                    <Button variant="outlined" onClick={() => setIsEditing(true)} startIcon={<Pencil size={16} />} sx={{ borderRadius: "8px" }}>
+                      Edit
+                    </Button>
+                  )
+                )}
+                <Tooltip title={!permissions.canRejectNews ? "No permission to reject" : ""}>
+                  <span>
                     <Button
                       variant="outlined"
-                      onClick={() => setIsEditing(false)}
-                      sx={{ borderRadius: "8px", textTransform: "none", fontWeight: 600, fontSize: "0.8125rem" }}
+                      color="error"
+                      disabled={!permissions.canRejectNews || selectedStory.status === "rejected"}
+                      onClick={() => handleReject(selectedStory.id, selectedStory.title)}
+                      startIcon={<XCircle size={16} />}
+                      sx={{ borderRadius: "8px" }}
                     >
-                      Cancel
+                      Reject
                     </Button>
-                  </>
-                ) : (
-                  <>
-                    <Tooltip title={!permissions.canApproveNews ? "No permission" : ""}>
-                      <Box>
-                        <Button
-                          variant="contained"
-                          startIcon={<CheckCircle size={14} />}
-                          onClick={handleApprove}
-                          disabled={!permissions.canApproveNews || selectedStory.status === "approved" || selectedStory.status === "rejected" || selectedStory.status === "published"}
-                          sx={{
-                            backgroundColor: "#28a745",
-                            color: "#fff",
-                            borderRadius: "8px",
-                            textTransform: "none",
-                            fontWeight: 600,
-                            fontSize: "0.8125rem",
-                            "&:hover": { backgroundColor: "#218838" },
-                            "&.Mui-disabled": {
-                              backgroundColor: mode === "light" ? "#f5f5f5" : "#333",
-                              color: "text.secondary",
-                            },
-                          }}
-                        >
-                          Approve
-                        </Button>
-                      </Box>
-                    </Tooltip>
-                    <Tooltip title={!permissions.canRejectNews ? "No permission" : ""}>
-                      <Box>
-                        <Button
-                          variant="contained"
-                          startIcon={<XCircle size={14} />}
-                          onClick={handleReject}
-                          disabled={!permissions.canRejectNews || selectedStory.status === "approved" || selectedStory.status === "rejected" || selectedStory.status === "published"}
-                          sx={{
-                            backgroundColor: "#dc3545",
-                            color: "#fff",
-                            borderRadius: "8px",
-                            textTransform: "none",
-                            fontWeight: 600,
-                            fontSize: "0.8125rem",
-                            "&:hover": { backgroundColor: "#c82333" },
-                            "&.Mui-disabled": {
-                              backgroundColor: mode === "light" ? "#f5f5f5" : "#333",
-                              color: "text.secondary",
-                            },
-                          }}
-                        >
-                          Reject
-                        </Button>
-                      </Box>
-                    </Tooltip>
-                    <Tooltip title={!permissions.canEditContent ? "No permission" : ""}>
-                      <Box>
-                        <Button
-                          variant="outlined"
-                          startIcon={<Pencil size={14} />}
-                          onClick={() => setIsEditing(true)}
-                          disabled={!permissions.canEditContent || selectedStory.status === "approved" || selectedStory.status === "rejected" || selectedStory.status === "published"}
-                          sx={{
-                            borderRadius: "8px",
-                            textTransform: "none",
-                            fontWeight: 600,
-                            fontSize: "0.8125rem",
-                            borderColor: "divider",
-                            color: "text.primary",
-                            "&:hover": { borderColor: "text.primary" },
-                            "&.Mui-disabled": {
-                              borderColor: "divider",
-                              color: "text.secondary",
-                            },
-                          }}
-                        >
-                          Edit
-                        </Button>
-                      </Box>
-                    </Tooltip>
-                  </>
-                )}
+                  </span>
+                </Tooltip>
+                <Tooltip title={!permissions.canApproveNews ? "No permission to approve" : ""}>
+                  <span>
+                    <Button
+                      variant="contained"
+                      color="success"
+                      disabled={!permissions.canApproveNews || selectedStory.status === "approved"}
+                      onClick={() => handleApprove(selectedStory.id, selectedStory.title)}
+                      startIcon={<CheckCircle size={16} />}
+                      sx={{ borderRadius: "8px", fontWeight: 700 }}
+                    >
+                      Approve & Publish
+                    </Button>
+                  </span>
+                </Tooltip>
               </Box>
             </>
           )}

@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState } from "react";
 import {
   Box,
   Typography,
@@ -9,68 +10,83 @@ import {
   Modal,
   InputAdornment,
   useTheme,
-  useMediaQuery,
   IconButton,
-  Tabs,
-  Tab,
   Tooltip,
+  ToggleButtonGroup,
+  ToggleButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
 } from "@mui/material";
-import React, { useState } from "react";
 import {
   Search,
   CheckCircle,
   XCircle,
   Pencil,
   Eye,
-  Image,
-  X,
   Sparkles,
   Lock,
+  RotateCcw,
+  LayoutGrid,
+  List,
 } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useNewsroom } from "@/providers/NewsroomProvider";
 import { useThemeMode } from "@/providers/MuiProvider";
-import { AIContent, AIContentStatus, Platform } from "@/types/newsroom";
+import { AIContent, Platform } from "@/types/newsroom";
 
-const PLATFORM_COLORS: Record<Platform, string> = {
-  YouTube: "#FF0000",
-  Instagram: "#E4405F",
-  "X (Twitter)": "#000000",
-  Facebook: "#1877F2",
-  LinkedIn: "#0A66C2",
-};
+const YoutubeIcon: React.FC<{ size?: number; color?: string }> = ({ size = 20, color = "#FF0000" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+  </svg>
+);
 
-const STATUS_COLORS: Record<AIContentStatus, { bg: string; text: string }> = {
-  pending: { bg: "#FFF8E1", text: "#F57F17" },
-  approved: { bg: "#E8F5E9", text: "#2E7D32" },
-  rejected: { bg: "#FFEBEE", text: "#C62828" },
-};
+const InstagramIcon: React.FC<{ size?: number; color?: string }> = ({ size = 20, color = "#E4405F" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+  </svg>
+);
 
-const AIContentReview: React.FC = () => {
+const XIcon: React.FC<{ size?: number; color?: string }> = ({ size = 20, color = "#1DA1F2" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+  </svg>
+);
+
+export default function AIContentReview() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const platformParam = searchParams.get("platform");
+
   const { aiContent, updateAIContentStatus, updateAIContentCaption, permissions, addActivity } = useNewsroom();
   const { mode } = useThemeMode();
   const theme = useTheme();
 
-  const [tab, setTab] = useState<"all" | "pending" | "approved" | "rejected">("all");
+  const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
+  const [platformFilter, setPlatformFilter] = useState<Platform | "all">((platformParam as any) || "all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedContent, setSelectedContent] = useState<AIContent | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxImage, setLightboxImage] = useState("");
   const [isEditingCaption, setIsEditingCaption] = useState(false);
   const [editCaption, setEditCaption] = useState("");
 
-  const filteredContent = aiContent.filter((c) => {
+  const filteredContent = aiContent.filter((item) => {
+    const matchesPlatform = platformFilter === "all" || item.platform === platformFilter;
     const matchesSearch =
-      c.caption.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.platform.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.campaign.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTab = tab === "all" || c.status === tab;
-    return matchesSearch && matchesTab;
+      item.caption.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.campaign.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesPlatform && matchesSearch;
   });
 
-  const openPreview = (content: AIContent) => {
-    setSelectedContent(content);
-    setEditCaption(content.caption);
+  const handleOpenPreview = (item: AIContent) => {
+    setSelectedContent(item);
+    setEditCaption(item.caption);
     setIsEditingCaption(false);
     setModalOpen(true);
   };
@@ -78,7 +94,7 @@ const AIContentReview: React.FC = () => {
   const handleApprove = () => {
     if (!selectedContent || !permissions.canApproveSocialContent) return;
     updateAIContentStatus(selectedContent.id, "approved");
-    addActivity("approved", "Digital Team", `AI post for ${selectedContent.platform}`, "Content approved for publishing");
+    addActivity("approved", "Digital Team", `AI post for ${selectedContent.platform}`, "Content approved");
     setModalOpen(false);
   };
 
@@ -103,42 +119,49 @@ const AIContentReview: React.FC = () => {
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Sparkles size={20} color="#9b59b6" />
           <Typography sx={{ fontWeight: 600, fontSize: "1.125rem" }}>
-            AI Content Review
+            AI Content Review Overview
+          </Typography>
+          <Typography sx={{ fontSize: "0.8125rem", color: "text.secondary", ml: 1 }}>
+            {filteredContent.length} items
           </Typography>
         </Box>
-        <Typography sx={{ fontSize: "0.8125rem", color: "text.secondary" }}>
-          {filteredContent.length} items
-        </Typography>
-      </Box>
 
-      {/* Tabs */}
-      <Box sx={{ backgroundColor: "background.paper", borderRadius: "12px", boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.03)", border: "1px solid", borderColor: "divider" }}>
-        <Tabs
-          value={tab}
-          onChange={(_, v) => setTab(v)}
-          variant="scrollable"
-          scrollButtons="auto"
-          allowScrollButtonsMobile
+        {/* View Toggle */}
+        <ToggleButtonGroup
+          value={viewMode}
+          exclusive
+          onChange={(_, val) => val && setViewMode(val)}
+          size="small"
           sx={{
-            borderBottom: "1px solid",
-            borderColor: "divider",
-            minHeight: 42,
-            "& .MuiTab-root": { minHeight: 42, textTransform: "none", fontWeight: 500, fontSize: "0.8125rem", minWidth: "auto", px: { xs: 1.5, sm: 2 } },
+            height: 36,
+            "& .MuiToggleButton-root": {
+              px: 1.25,
+              borderRadius: "8px",
+              borderColor: "divider",
+              "&.Mui-selected": {
+                backgroundColor: mode === "light" ? "#000" : "#fff",
+                color: mode === "light" ? "#fff" : "#000",
+              },
+            },
           }}
         >
-          <Tab label={`All (${aiContent.length})`} value="all" />
-          <Tab label={`Pending (${aiContent.filter((c) => c.status === "pending").length})`} value="pending" />
-          <Tab label={`Approved (${aiContent.filter((c) => c.status === "approved").length})`} value="approved" />
-          <Tab label={`Rejected (${aiContent.filter((c) => c.status === "rejected").length})`} value="rejected" />
-        </Tabs>
+          <ToggleButton value="cards">
+            <Tooltip title="Cards View"><Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}><LayoutGrid size={15} /><Typography sx={{ fontSize: "0.75rem", textTransform: "none", fontWeight: 600 }}>Cards</Typography></Box></Tooltip>
+          </ToggleButton>
+          <ToggleButton value="list">
+            <Tooltip title="List View"><Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}><List size={15} /><Typography sx={{ fontSize: "0.75rem", textTransform: "none", fontWeight: 600 }}>List</Typography></Box></Tooltip>
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
 
-        <Box sx={{ p: 2 }}>
+      {/* Control Toolbar */}
+      <Box sx={{ backgroundColor: "background.paper", borderRadius: "12px", p: 1.75, border: "1px solid", borderColor: "divider" }}>
+        <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap", alignItems: "center" }}>
           <TextField
-            placeholder="Search content..."
+            placeholder="Search AI posts, captions, campaigns..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             size="small"
-            fullWidth
             slotProps={{
               input: {
                 startAdornment: (
@@ -149,387 +172,151 @@ const AIContentReview: React.FC = () => {
               },
             }}
             sx={{
-              "& .MuiOutlinedInput-root": { borderRadius: "12px", fontSize: "0.8125rem" },
+              flex: 1,
+              minWidth: { xs: "100%", sm: 240 },
+              "& .MuiOutlinedInput-root": { borderRadius: "10px", fontSize: "0.8125rem", height: 38 },
             }}
           />
         </Box>
       </Box>
 
-      {/* Content Grid */}
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }, gap: 2 }}>
-        {filteredContent.map((content) => (
-          <Box
-            key={content.id}
-            sx={{
-              backgroundColor: "background.paper",
-              borderRadius: "12px",
-              overflow: "hidden",
-              boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.03)",
-              border: "1px solid",
-              borderColor: "divider",
-              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-              "&:hover": { transform: "translateY(-2px)", boxShadow: "0px 8px 24px rgba(0, 0, 0, 0.08)" },
-            }}
-          >
-            {/* Image */}
+      {/* VIEW MODE 1: CARDS VIEW */}
+      {viewMode === "cards" && (
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }, gap: 2 }}>
+          {filteredContent.map((item) => (
             <Box
+              key={item.id}
               sx={{
-                height: 160,
-                backgroundColor: "action.hover",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                position: "relative",
+                backgroundColor: "background.paper",
+                borderRadius: "12px",
                 overflow: "hidden",
-                "&:hover .overlay": { opacity: 1 },
+                border: "1px solid",
+                borderColor: "divider",
+                boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.03)",
+                display: "flex",
+                flexDirection: "column",
+                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                "&:hover": { transform: "translateY(-2px)", boxShadow: "0px 8px 24px rgba(0, 0, 0, 0.08)" },
               }}
-              onClick={() => { setLightboxImage(content.imageUrl); setLightboxOpen(true); }}
             >
-              <img
-                src={content.imageUrl}
-                alt={content.caption}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = "none";
-                }}
-              />
-              <Box
-                className="overlay"
-                sx={{
-                  position: "absolute",
-                  inset: 0,
-                  backgroundColor: "rgba(0,0,0,0.4)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  opacity: 0,
-                  transition: "opacity 0.2s",
-                }}
-              >
-                <Eye size={28} color="#fff" />
-              </Box>
-            </Box>
-
-            {/* Content */}
-            <Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 1 }}>
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 1 }}>
+              <Box sx={{ position: "relative", width: "100%", height: 160, backgroundColor: "#000", cursor: "pointer" }} onClick={() => handleOpenPreview(item)}>
+                <img src={item.imageUrl} alt="AI Content" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 <Chip
-                  label={content.platform}
+                  label={item.platform}
                   size="small"
                   sx={{
-                    fontSize: "0.625rem",
-                    height: 20,
+                    position: "absolute",
+                    top: 10,
+                    left: 10,
+                    backgroundColor: "rgba(0,0,0,0.8)",
+                    color: "#FFF",
+                    fontSize: "0.7rem",
                     fontWeight: 600,
-                    backgroundColor: PLATFORM_COLORS[content.platform] + "15",
-                    color: PLATFORM_COLORS[content.platform],
-                    borderRadius: "6px",
-                  }}
-                />
-                <Chip
-                  label={content.status}
-                  size="small"
-                  sx={{
-                    fontSize: "0.625rem",
-                    height: 20,
-                    fontWeight: 600,
-                    backgroundColor: STATUS_COLORS[content.status].bg,
-                    color: STATUS_COLORS[content.status].text,
-                    borderRadius: "6px",
-                    textTransform: "capitalize",
                   }}
                 />
               </Box>
 
-              <Typography sx={{ fontSize: "0.8125rem", lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                {content.caption}
-              </Typography>
-
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <Typography sx={{ fontSize: "0.6875rem", color: "text.secondary" }}>
-                  {content.campaign}
+              <Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 1.25, flex: 1 }}>
+                <Typography sx={{ fontSize: "0.8125rem", lineHeight: 1.45, fontWeight: 500 }}>
+                  {item.caption}
                 </Typography>
-                <Chip
-                  label={`${content.confidenceScore}%`}
-                  size="small"
-                  sx={{
-                    fontSize: "0.625rem",
-                    height: 20,
-                    fontWeight: 600,
-                    backgroundColor: content.confidenceScore >= 85 ? "#E8F5E9" : content.confidenceScore >= 70 ? "#FFF8E1" : "#FFEBEE",
-                    color: content.confidenceScore >= 85 ? "#2E7D32" : content.confidenceScore >= 70 ? "#F57F17" : "#C62828",
-                    borderRadius: "6px",
-                  }}
-                />
-              </Box>
 
-              <Typography sx={{ fontSize: "0.6875rem", color: "text.secondary" }}>
-                {new Date(content.generatedAt).toLocaleDateString()}
-              </Typography>
-
-              {/* Action Buttons */}
-              <Box sx={{ display: "flex", gap: 0.75, mt: 0.5 }}>
-                <Tooltip title={!permissions.canApproveSocialContent ? "No permission" : ""}>
-                  <Box sx={{ flex: 1 }}>
-                    <Button
-                      fullWidth
-                      size="small"
-                      startIcon={<Eye size={14} />}
-                      onClick={() => openPreview(content)}
-                      sx={{
-                        fontSize: "0.6875rem",
-                        fontWeight: 600,
-                        textTransform: "none",
-                        color: "text.primary",
-                        border: "1px solid",
-                        borderColor: "divider",
-                        borderRadius: "6px",
-                        py: 0.5,
-                        "&:hover": { borderColor: "text.primary" },
-                      }}
-                    >
-                      Preview
+                <Box sx={{ mt: "auto", pt: 1, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Button size="small" variant="outlined" onClick={() => handleOpenPreview(item)} startIcon={<Eye size={14} />} sx={{ borderRadius: "8px", textTransform: "none", fontSize: "0.75rem" }}>
+                    Inspect
+                  </Button>
+                  {item.status === "pending" && permissions.canApproveSocialContent && (
+                    <Button size="small" variant="contained" onClick={() => updateAIContentStatus(item.id, "approved")} sx={{ borderRadius: "8px", textTransform: "none", fontSize: "0.75rem" }}>
+                      Approve
                     </Button>
-                  </Box>
-                </Tooltip>
-                <Tooltip title={!permissions.canApproveSocialContent ? "No permission" : ""}>
-                  <Box>
-                    <IconButton
-                      size="small"
-                      disabled={!permissions.canApproveSocialContent || content.status === "approved"}
-                      onClick={() => {
-                        updateAIContentStatus(content.id, "approved");
-                        addActivity("approved", "Digital Team", `AI post for ${content.platform}`);
-                      }}
-                      sx={{
-                        border: "1px solid",
-                        borderColor: content.status === "approved" ? "#28a745" : "divider",
-                        borderRadius: "6px",
-                        p: 0.5,
-                        "&:hover": { backgroundColor: "#E8F5E9" },
-                      }}
-                    >
-                      <CheckCircle size={16} color={content.status === "approved" ? "#28a745" : "#999"} />
-                    </IconButton>
-                  </Box>
-                </Tooltip>
-                <Tooltip title={!permissions.canApproveSocialContent ? "No permission" : ""}>
-                  <Box>
-                    <IconButton
-                      size="small"
-                      disabled={!permissions.canApproveSocialContent || content.status === "rejected"}
-                      onClick={() => {
-                        updateAIContentStatus(content.id, "rejected");
-                        addActivity("rejected", "Digital Team", `AI post for ${content.platform}`);
-                      }}
-                      sx={{
-                        border: "1px solid",
-                        borderColor: content.status === "rejected" ? "#dc3545" : "divider",
-                        borderRadius: "6px",
-                        p: 0.5,
-                        "&:hover": { backgroundColor: "#FFEBEE" },
-                      }}
-                    >
-                      <XCircle size={16} color={content.status === "rejected" ? "#dc3545" : "#999"} />
-                    </IconButton>
-                  </Box>
-                </Tooltip>
+                  )}
+                </Box>
               </Box>
             </Box>
-          </Box>
-        ))}
-      </Box>
-
-      {filteredContent.length === 0 && (
-        <Box sx={{ textAlign: "center", py: 6, color: "text.secondary" }}>
-          <Typography sx={{ fontSize: "0.875rem" }}>No content matches your filters</Typography>
+          ))}
         </Box>
       )}
 
-      {/* Preview Modal */}
-      <Modal open={modalOpen} onClose={() => { setModalOpen(false); setSelectedContent(null); setIsEditingCaption(false); }}>
-        <Box
-          sx={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: "calc(100vw - 32px)",
-            maxWidth: 640,
-            maxHeight: "calc(100vh - 48px)",
-            bgcolor: "background.paper",
-            borderRadius: "16px",
-            boxShadow: "0 24px 80px rgba(0, 0, 0, 0.35)",
-            overflow: "hidden",
-            outline: "none",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          {selectedContent && (
-            <>
-              <Box sx={{ p: 2, borderBottom: "1px solid", borderColor: "divider", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <Typography sx={{ fontWeight: 600, fontSize: "0.875rem" }}>Content Preview</Typography>
-                <IconButton size="small" onClick={() => { setModalOpen(false); setSelectedContent(null); setIsEditingCaption(false); }}>
-                  <X size={18} />
-                </IconButton>
-              </Box>
-
-              <Box sx={{ p: { xs: 2, sm: 3 }, overflowY: "auto", flex: 1 }}>
-                <Box sx={{ mb: 2, borderRadius: "8px", overflow: "hidden", backgroundColor: "action.hover" }}>
-                  <img
-                    src={selectedContent.imageUrl}
-                    alt={selectedContent.caption}
-                    style={{ width: "100%", maxHeight: 300, objectFit: "cover" }}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                </Box>
-
-                <Box sx={{ display: "flex", gap: 1, mb: 2, flexWrap: "wrap" }}>
-                  <Chip
-                    label={selectedContent.platform}
-                    size="small"
-                    sx={{ fontSize: "0.6875rem", fontWeight: 600, backgroundColor: PLATFORM_COLORS[selectedContent.platform] + "15", color: PLATFORM_COLORS[selectedContent.platform], borderRadius: "6px" }}
-                  />
-                  <Chip
-                    label={selectedContent.status}
-                    size="small"
-                    sx={{ fontSize: "0.6875rem", fontWeight: 600, backgroundColor: STATUS_COLORS[selectedContent.status].bg, color: STATUS_COLORS[selectedContent.status].text, borderRadius: "6px", textTransform: "capitalize" }}
-                  />
-                  <Chip
-                    label={`${selectedContent.confidenceScore}% confidence`}
-                    size="small"
-                    sx={{ fontSize: "0.6875rem", fontWeight: 600, backgroundColor: selectedContent.confidenceScore >= 85 ? "#E8F5E9" : "#FFF8E1", color: selectedContent.confidenceScore >= 85 ? "#2E7D32" : "#F57F17", borderRadius: "6px" }}
-                  />
-                </Box>
-
-                <Box sx={{ mb: 2 }}>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-                    <Typography sx={{ fontWeight: 600, fontSize: "0.8125rem", color: "text.secondary" }}>Caption</Typography>
-                    {permissions.canApproveSocialContent && selectedContent.status === "pending" && (
-                      <Button
-                        size="small"
-                        startIcon={isEditingCaption ? null : <Pencil size={14} />}
-                        onClick={() => setIsEditingCaption(!isEditingCaption)}
-                        sx={{ fontSize: "0.6875rem", textTransform: "none", fontWeight: 600 }}
-                      >
-                        {isEditingCaption ? "Cancel" : "Edit"}
-                      </Button>
-                    )}
-                  </Box>
-                  {isEditingCaption ? (
-                    <Box sx={{ display: "flex", gap: 1 }}>
-                      <TextField
-                        multiline
-                        rows={2}
-                        value={editCaption}
-                        onChange={(e) => setEditCaption(e.target.value)}
-                        fullWidth
-                        size="small"
-                        sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.8125rem" } }}
-                      />
-                      <Button
-                        variant="contained"
-                        size="small"
-                        onClick={handleSaveCaption}
-                        sx={{ borderRadius: "8px", textTransform: "none", fontWeight: 600, fontSize: "0.75rem", alignSelf: "flex-start" }}
-                      >
-                        Save
-                      </Button>
+      {/* VIEW MODE 2: LIST VIEW TABLE */}
+      {viewMode === "list" && (
+        <TableContainer component={Paper} sx={{ borderRadius: "12px", border: "1px solid", borderColor: "divider" }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ backgroundColor: mode === "light" ? "#f9fafb" : "#1a1a1a" }}>
+                <TableCell sx={{ fontWeight: 700, fontSize: "0.75rem" }}>Media</TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: "0.75rem" }}>Platform</TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: "0.75rem" }}>Campaign</TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: "0.75rem" }}>Caption</TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: "0.75rem" }}>Status</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.75rem" }}>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredContent.map((item) => (
+                <TableRow key={item.id} hover onClick={() => handleOpenPreview(item)} sx={{ cursor: "pointer" }}>
+                  <TableCell>
+                    <Box sx={{ width: 44, height: 44, borderRadius: "6px", overflow: "hidden" }}>
+                      <img src={item.imageUrl} alt="AI" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     </Box>
-                  ) : (
-                    <Typography sx={{ fontSize: "0.8125rem", lineHeight: 1.5 }}>
-                      {selectedContent.caption}
-                    </Typography>
-                  )}
-                </Box>
+                  </TableCell>
+                  <TableCell sx={{ fontSize: "0.75rem", fontWeight: 700 }}>{item.platform}</TableCell>
+                  <TableCell sx={{ fontSize: "0.75rem" }}>{item.campaign}</TableCell>
+                  <TableCell sx={{ fontSize: "0.8125rem", maxWidth: 300 }}>{item.caption}</TableCell>
+                  <TableCell>
+                    <Chip label={item.status} size="small" sx={{ fontSize: "0.65rem", fontWeight: 700 }} />
+                  </TableCell>
+                  <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                    <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
+                      <Button size="small" variant="outlined" onClick={() => handleOpenPreview(item)} sx={{ borderRadius: "6px", textTransform: "none", fontSize: "0.7rem" }}>Inspect</Button>
+                      {item.status === "pending" && permissions.canApproveSocialContent && (
+                        <Button size="small" variant="contained" onClick={() => updateAIContentStatus(item.id, "approved")} sx={{ borderRadius: "6px", textTransform: "none", fontSize: "0.7rem" }}>Approve</Button>
+                      )}
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
-                <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
-                  <Typography sx={{ fontSize: "0.75rem", color: "text.secondary" }}>
-                    <strong>Campaign:</strong> {selectedContent.campaign}
-                  </Typography>
-                  <Typography sx={{ fontSize: "0.75rem", color: "text.secondary" }}>
-                    <strong>Generated:</strong> {new Date(selectedContent.generatedAt).toLocaleString()}
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Box sx={{ p: { xs: 2, sm: 2 }, borderTop: "1px solid", borderColor: "divider", display: "flex", gap: 1.5, justifyContent: "flex-end", flexWrap: "wrap" }}>
-                <Tooltip title={!permissions.canApproveSocialContent ? "No permission" : ""}>
-                  <Box>
-                    <Button
-                      variant="contained"
-                      startIcon={<CheckCircle size={14} />}
-                      onClick={handleApprove}
-                      disabled={!permissions.canApproveSocialContent || selectedContent.status !== "pending"}
-                      sx={{
-                        backgroundColor: "#28a745",
-                        color: "#fff",
-                        borderRadius: "8px",
-                        textTransform: "none",
-                        fontWeight: 600,
-                        fontSize: "0.8125rem",
-                        "&:hover": { backgroundColor: "#218838" },
-                        "&.Mui-disabled": { backgroundColor: mode === "light" ? "#f5f5f5" : "#333", color: "text.secondary" },
-                      }}
-                    >
-                      Approve
-                    </Button>
-                  </Box>
-                </Tooltip>
-                <Tooltip title={!permissions.canApproveSocialContent ? "No permission" : ""}>
-                  <Box>
-                    <Button
-                      variant="contained"
-                      startIcon={<XCircle size={14} />}
-                      onClick={handleReject}
-                      disabled={!permissions.canApproveSocialContent || selectedContent.status !== "pending"}
-                      sx={{
-                        backgroundColor: "#dc3545",
-                        color: "#fff",
-                        borderRadius: "8px",
-                        textTransform: "none",
-                        fontWeight: 600,
-                        fontSize: "0.8125rem",
-                        "&:hover": { backgroundColor: "#c82333" },
-                        "&.Mui-disabled": { backgroundColor: mode === "light" ? "#f5f5f5" : "#333", color: "text.secondary" },
-                      }}
-                    >
-                      Reject
-                    </Button>
-                  </Box>
-                </Tooltip>
-              </Box>
-            </>
-          )}
-        </Box>
-      </Modal>
-
-      {/* Lightbox */}
-      <Modal open={lightboxOpen} onClose={() => setLightboxOpen(false)}>
-        <Box
-          sx={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            maxWidth: "90vw",
-            maxHeight: "90vh",
-            outline: "none",
-          }}
-          onClick={() => setLightboxOpen(false)}
-        >
-          <img
-            src={lightboxImage}
-            alt="Preview"
-            style={{ maxWidth: "100%", maxHeight: "90vh", borderRadius: "8px" }}
-          />
-        </Box>
-      </Modal>
+      {/* Modal */}
+      {selectedContent && (
+        <Modal open={modalOpen} onClose={() => setModalOpen(false)}>
+          <Box
+            sx={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              width: { xs: "90vw", sm: 540 },
+              maxHeight: "85vh",
+              backgroundColor: "background.paper",
+              borderRadius: "16px",
+              p: 3,
+              boxShadow: "0 24px 80px rgba(0, 0, 0, 0.35)",
+              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+            }}
+          >
+            <Typography sx={{ fontWeight: 700, fontSize: "1.125rem" }}>
+              {selectedContent.platform} Content Inspection
+            </Typography>
+            <Box sx={{ borderRadius: "12px", overflow: "hidden", height: 200, backgroundColor: "#000" }}>
+              <img src={selectedContent.imageUrl} alt="AI Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            </Box>
+            <Typography sx={{ fontSize: "0.875rem", lineHeight: 1.5, p: 1.5, borderRadius: "10px", backgroundColor: mode === "light" ? "#f9fafb" : "#222" }}>
+              {selectedContent.caption}
+            </Typography>
+            <Box sx={{ display: "flex", gap: 1.5, justifyContent: "flex-end" }}>
+              <Button variant="outlined" color="error" size="small" onClick={handleReject} sx={{ borderRadius: "8px" }}>Reject</Button>
+              <Button variant="contained" color="success" size="small" onClick={handleApprove} sx={{ borderRadius: "8px" }}>Approve</Button>
+            </Box>
+          </Box>
+        </Modal>
+      )}
     </Box>
   );
-};
-
-export default AIContentReview;
+}

@@ -7,6 +7,7 @@ export interface RolePermissions {
   canAccessApprovalPortal: boolean;
   canAccessDigitalDashboard: boolean;
   canAccessAIContentReview: boolean;
+  canAccessWebScraper: boolean;
   canAccessSettings: boolean;
   canApproveNews: boolean;
   canRejectNews: boolean;
@@ -25,6 +26,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canAccessApprovalPortal: true,
     canAccessDigitalDashboard: true,
     canAccessAIContentReview: true,
+    canAccessWebScraper: true,
     canAccessSettings: true,
     canApproveNews: true,
     canRejectNews: true,
@@ -41,6 +43,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canAccessApprovalPortal: true,
     canAccessDigitalDashboard: false,
     canAccessAIContentReview: false,
+    canAccessWebScraper: true,
     canAccessSettings: false,
     canApproveNews: true,
     canRejectNews: true,
@@ -57,6 +60,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canAccessApprovalPortal: false,
     canAccessDigitalDashboard: false,
     canAccessAIContentReview: false,
+    canAccessWebScraper: true,
     canAccessSettings: false,
     canApproveNews: false,
     canRejectNews: false,
@@ -73,6 +77,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canAccessApprovalPortal: false,
     canAccessDigitalDashboard: true,
     canAccessAIContentReview: true,
+    canAccessWebScraper: true,
     canAccessSettings: false,
     canApproveNews: false,
     canRejectNews: false,
@@ -89,6 +94,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canAccessApprovalPortal: false,
     canAccessDigitalDashboard: false,
     canAccessAIContentReview: false,
+    canAccessWebScraper: true,
     canAccessSettings: false,
     canApproveNews: false,
     canRejectNews: false,
@@ -102,14 +108,16 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
 };
 
 export const ROLE_LABELS: Record<UserRole, string> = {
-  admin: "Admin",
-  editor: "Editor",
-  assignment_desk: "Assignment Desk",
-  digital_team: "Digital Team",
-  viewer: "Viewer",
+  admin: "Admin (Full Access)",
+  editor: "Chief Editor",
+  assignment_desk: "Assignment Desk Manager",
+  digital_team: "Digital Content Team",
+  viewer: "Read-Only Viewer",
 };
 
-// ─── Stories ───────────────────────────────────────────────────────────────────
+// ─── Data Models ──────────────────────────────────────────────────────────────
+export type StoryPriority = "low" | "medium" | "high" | "urgent";
+
 export type StoryStatus =
   | "draft"
   | "assigned"
@@ -119,8 +127,6 @@ export type StoryStatus =
   | "rejected"
   | "published";
 
-export type StoryPriority = "low" | "medium" | "high" | "urgent";
-
 export type StoryCategory =
   | "Politics"
   | "Sports"
@@ -129,6 +135,14 @@ export type StoryCategory =
   | "Entertainment"
   | "Health"
   | "International";
+
+export interface Reporter {
+  id: string;
+  name: string;
+  avatar?: string;
+  email: string;
+  beat: string;
+}
 
 export interface Story {
   id: string;
@@ -145,9 +159,9 @@ export interface Story {
   tags: string[];
 }
 
-// ─── AI Content ────────────────────────────────────────────────────────────────
-export type AIContentStatus = "pending" | "approved" | "rejected";
 export type Platform = "YouTube" | "Instagram" | "X (Twitter)" | "Facebook" | "LinkedIn";
+
+export type AIContentStatus = "pending" | "approved" | "rejected";
 
 export interface AIContent {
   id: string;
@@ -161,7 +175,6 @@ export interface AIContent {
   storyId?: string;
 }
 
-// ─── Engagement ────────────────────────────────────────────────────────────────
 export interface PlatformEngagement {
   platform: Platform;
   views: number;
@@ -174,41 +187,47 @@ export interface PlatformEngagement {
   color: string;
 }
 
-// ─── Notifications ─────────────────────────────────────────────────────────────
-export type NotificationType =
-  | "story_approved"
-  | "story_rejected"
-  | "ai_caption_edited"
-  | "instagram_post_ready"
-  | "story_returned"
-  | "new_assignment"
-  | "ai_content_approved";
-
-export interface Notification {
-  id: string;
-  type: NotificationType;
-  message: string;
-  timestamp: string;
-  read: boolean;
-}
-
-// ─── Activity ──────────────────────────────────────────────────────────────────
-export type ActivityAction = "approved" | "rejected" | "edited" | "generated" | "assigned" | "published";
-
 export interface ActivityItem {
   id: string;
-  action: ActivityAction;
+  action: "approved" | "rejected" | "generated" | "assigned" | "published" | "edited";
   actor: string;
   target: string;
   timestamp: string;
   details?: string;
 }
 
-// ─── Reporters ─────────────────────────────────────────────────────────────────
-export interface Reporter {
+export interface Notification {
   id: string;
-  name: string;
-  avatar: string;
-  email: string;
-  beat: string;
+  type:
+    | "story_approved"
+    | "ai_caption_edited"
+    | "instagram_post_ready"
+    | "story_returned"
+    | "new_assignment"
+    | "ai_content_approved";
+  message: string;
+  timestamp: string;
+  read: boolean;
+}
+
+// ─── Web Scraper Data Interfaces ──────────────────────────────────────────────
+export type ScraperType = "topics" | "articles" | "hashtags";
+
+export interface ScraperItem {
+  id: string;
+  rank: number; // 1 to 20
+  title: string; // Topic name / Article title / #hashtag
+  type: ScraperType;
+  platform: "X (Twitter)" | "YouTube" | "Instagram" | "Google News" | "Reddit" | "Web Scraper";
+  url: string;
+  engagementStats: {
+    viewsOrVolume: string; // e.g., "1.8M Mentions" or "450K Reads"
+    growthRate: string; // e.g., "+340% in 2h"
+    sharesOrPosts: string; // e.g., "124K Shares"
+  };
+  reasonWhy: string; // 1-2 liner explaining WHY it is trending
+  superTag: string; // Superset category tag (e.g. "Rajasthan Infrastructure")
+  subTag: string; // Subset topic tag (e.g. "Jaipur Metro Phase 2")
+  timeFrame: "24h" | "12h" | "7d"; // Default "24h"
+  scrapedAt: string;
 }

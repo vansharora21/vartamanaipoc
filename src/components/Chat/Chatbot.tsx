@@ -23,13 +23,25 @@ interface Message {
   timestamp: Date;
 }
 
+const lightTheme = createTheme({
+  palette: {
+    mode: "light",
+    primary: { main: "#000" },
+    background: { paper: "#fff", default: "#fff" },
+    text: { primary: "#000", secondary: "#666" },
+  },
+  shape: { borderRadius: 12 },
+});
+
 export default function AgentAssistant() {
+  const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
 
   useEffect(() => {
+    setMounted(true);
     setMessages([
       {
         text: "Good day! I'm your Personal Property Assistant. I've analyzed your latest dashboard data—is there anything specific you'd like me to look into for you?",
@@ -70,15 +82,7 @@ export default function AgentAssistant() {
     }, 500);
   };
 
-  const lightTheme = createTheme({
-    palette: {
-      mode: "light",
-      primary: { main: "#000" },
-      background: { paper: "#fff", default: "#fff" },
-      text: { primary: "#000", secondary: "#666" },
-    },
-    shape: { borderRadius: 12 },
-  });
+  if (!mounted) return null;
 
   return (
     <ThemeProvider theme={lightTheme}>

@@ -366,43 +366,57 @@ const DashBoardCommonHeader: React.FC = () => {
         {/* Quick Access */}
         <Button
           variant="outlined"
-          startIcon={<Zap size={16} />}
           onClick={() => setSearchOpen(true)}
           sx={{
             display: { xs: "none", sm: "inline-flex" },
             textTransform: "none",
-            borderRadius: "12px",
-            color: mode === "light" ? "#1f2937" : "#fff",
+            borderRadius: "10px",
+            color: mode === "light" ? "#374151" : "#d1d5db",
             borderColor: mode === "light" ? "#e5e7eb" : "#333",
-            backgroundColor: mode === "light" ? "#fff" : "#1e1e1e",
-            boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
-            "&:hover": { borderColor: mode === "light" ? "#d1d5db" : "#444", backgroundColor: mode === "light" ? "#f9fafb" : "#2a2a2a" },
-            minHeight: 40,
+            backgroundColor: mode === "light" ? "#f9fafb" : "#1e1e1e",
+            boxShadow: "0 1px 2px rgba(0, 0, 0, 0.03)",
+            transition: "all 0.15s ease",
+            "&:hover": {
+              borderColor: mode === "light" ? "#d1d5db" : "#444",
+              backgroundColor: mode === "light" ? "#f3f4f6" : "#2a2a2a",
+              color: mode === "light" ? "#111827" : "#fff",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+            },
+            minHeight: 38,
             px: 1.5,
-            py: 0.75,
+            py: 0.5,
             minWidth: 0,
             flexShrink: 0,
+            alignItems: "center",
+            gap: 1,
           }}
-          endIcon={
-            <Box
-              component="span"
-              sx={{
-                padding: "2px 6px",
-                fontSize: "0.75rem",
-                fontWeight: 600,
-                color: mode === "light" ? "#374151" : "#fff",
-                backgroundColor: mode === "light" ? "#f3f4f6" : "#333",
-                border: "1px solid",
-                borderColor: mode === "light" ? "#d1d5db" : "#444",
-                borderRadius: "6px",
-                ml: 1
-              }}
-            >
-              Ctrl K
-            </Box>
-          }
         >
-          Quick Access
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+            <Zap size={15} style={{ color: mode === "light" ? "#2563eb" : "#60a5fa" }} />
+            <Typography sx={{ fontSize: "0.8125rem", fontWeight: 500 }}>
+              Quick Access
+            </Typography>
+          </Box>
+          <Box
+            component="span"
+            sx={{
+              px: 0.75,
+              py: 0.2,
+              fontSize: "0.7rem",
+              fontWeight: 600,
+              fontFamily: "monospace, sans-serif",
+              letterSpacing: "0.5px",
+              color: mode === "light" ? "#6b7280" : "#9ca3af",
+              backgroundColor: mode === "light" ? "#ffffff" : "#2a2a2a",
+              border: "1px solid",
+              borderColor: mode === "light" ? "#e5e7eb" : "#444",
+              borderRadius: "6px",
+              boxShadow: mode === "light" ? "0 1px 1px rgba(0,0,0,0.05)" : "none",
+              ml: 0.5,
+            }}
+          >
+            ⌘K
+          </Box>
         </Button>
         {/* Mobile search icon */}
         <IconButton
