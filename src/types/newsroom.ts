@@ -187,24 +187,28 @@ export interface PlatformEngagement {
   color: string;
 }
 
+export type ActivityAction = "approved" | "rejected" | "generated" | "assigned" | "published" | "edited";
+
 export interface ActivityItem {
   id: string;
-  action: "approved" | "rejected" | "generated" | "assigned" | "published" | "edited";
+  action: ActivityAction;
   actor: string;
   target: string;
   timestamp: string;
   details?: string;
 }
 
+export type NotificationType =
+  | "story_approved"
+  | "ai_caption_edited"
+  | "instagram_post_ready"
+  | "story_returned"
+  | "new_assignment"
+  | "ai_content_approved";
+
 export interface Notification {
   id: string;
-  type:
-    | "story_approved"
-    | "ai_caption_edited"
-    | "instagram_post_ready"
-    | "story_returned"
-    | "new_assignment"
-    | "ai_content_approved";
+  type: NotificationType;
   message: string;
   timestamp: string;
   read: boolean;
