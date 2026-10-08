@@ -41,7 +41,7 @@ interface NewsroomContextType {
   // Story actions
   updateStoryStatus: (storyId: string, status: StoryStatus) => void;
   updateStory: (storyId: string, updates: Partial<Story>) => void;
-  assignStory: (storyId: string) => void;
+  addStory: (story: Omit<Story, "id" | "createdAt" | "updatedAt">) => void;
 
   // AI Content actions
   updateAIContentStatus: (contentId: string, status: AIContentStatus) => void;
@@ -87,7 +87,7 @@ export function NewsroomProvider({ children }: { children: ReactNode }) {
       setData(generateAndStoreData());
     }
     const savedRole = localStorage.getItem(ROLE_STORAGE_KEY) as UserRole;
-    if (savedRole) {
+    if (savedRole && ROLE_PERMISSIONS[savedRole]) {
       setCurrentRole(savedRole);
     }
     setMounted(true);
@@ -129,13 +129,17 @@ export function NewsroomProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const assignStory = useCallback((storyId: string) => {
+  const addStory = useCallback((story: Omit<Story, "id" | "createdAt" | "updatedAt">) => {
     setData((prev) => {
       if (!prev) return prev;
-      const stories = prev.stories.map((s) =>
-        s.id === storyId ? { ...s, status: "pending_approval" as StoryStatus, updatedAt: new Date().toISOString() } : s
-      );
-      return { ...prev, stories };
+      const now = new Date().toISOString();
+      const newStory: Story = {
+        ...story,
+        id: `story-${Date.now()}`,
+        createdAt: now,
+        updatedAt: now,
+      };
+      return { ...prev, stories: [newStory, ...prev.stories] };
     });
   }, []);
 
@@ -243,7 +247,7 @@ export function NewsroomProvider({ children }: { children: ReactNode }) {
         permissions,
         updateStoryStatus,
         updateStory,
-        assignStory,
+        addStory,
         updateAIContentStatus,
         updateAIContentCaption,
         markNotificationRead,

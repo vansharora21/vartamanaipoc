@@ -1,9 +1,8 @@
 // ─── Roles & Permissions ───────────────────────────────────────────────────────
-export type UserRole = "admin" | "editor" | "assignment_desk" | "digital_team" | "viewer";
+export type UserRole = "admin" | "editor" | "digital_team" | "viewer";
 
 export interface RolePermissions {
   canAccessDashboard: boolean;
-  canAccessAssignmentDesk: boolean;
   canAccessApprovalPortal: boolean;
   canAccessDigitalDashboard: boolean;
   canAccessAIContentReview: boolean;
@@ -12,7 +11,6 @@ export interface RolePermissions {
   canApproveNews: boolean;
   canRejectNews: boolean;
   canEditContent: boolean;
-  canCreateAssignments: boolean;
   canSendStories: boolean;
   canEditNewsroomStories: boolean;
   canApproveSocialContent: boolean;
@@ -22,7 +20,6 @@ export interface RolePermissions {
 export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
   admin: {
     canAccessDashboard: true,
-    canAccessAssignmentDesk: true,
     canAccessApprovalPortal: true,
     canAccessDigitalDashboard: true,
     canAccessAIContentReview: true,
@@ -31,7 +28,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canApproveNews: true,
     canRejectNews: true,
     canEditContent: true,
-    canCreateAssignments: true,
     canSendStories: true,
     canEditNewsroomStories: true,
     canApproveSocialContent: true,
@@ -39,7 +35,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
   },
   editor: {
     canAccessDashboard: true,
-    canAccessAssignmentDesk: false,
     canAccessApprovalPortal: true,
     canAccessDigitalDashboard: false,
     canAccessAIContentReview: false,
@@ -48,32 +43,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canApproveNews: true,
     canRejectNews: true,
     canEditContent: true,
-    canCreateAssignments: false,
     canSendStories: false,
     canEditNewsroomStories: true,
     canApproveSocialContent: false,
     canViewOnly: false,
   },
-  assignment_desk: {
-    canAccessDashboard: true,
-    canAccessAssignmentDesk: true,
-    canAccessApprovalPortal: false,
-    canAccessDigitalDashboard: false,
-    canAccessAIContentReview: false,
-    canAccessWebScraper: true,
-    canAccessSettings: false,
-    canApproveNews: false,
-    canRejectNews: false,
-    canEditContent: false,
-    canCreateAssignments: true,
-    canSendStories: true,
-    canEditNewsroomStories: false,
-    canApproveSocialContent: false,
-    canViewOnly: false,
-  },
   digital_team: {
     canAccessDashboard: true,
-    canAccessAssignmentDesk: false,
     canAccessApprovalPortal: false,
     canAccessDigitalDashboard: true,
     canAccessAIContentReview: true,
@@ -82,7 +58,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canApproveNews: false,
     canRejectNews: false,
     canEditContent: false,
-    canCreateAssignments: false,
     canSendStories: false,
     canEditNewsroomStories: false,
     canApproveSocialContent: true,
@@ -90,7 +65,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
   },
   viewer: {
     canAccessDashboard: true,
-    canAccessAssignmentDesk: false,
     canAccessApprovalPortal: false,
     canAccessDigitalDashboard: false,
     canAccessAIContentReview: false,
@@ -99,7 +73,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canApproveNews: false,
     canRejectNews: false,
     canEditContent: false,
-    canCreateAssignments: false,
     canSendStories: false,
     canEditNewsroomStories: false,
     canApproveSocialContent: false,
@@ -110,7 +83,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
 export const ROLE_LABELS: Record<UserRole, string> = {
   admin: "Admin (Full Access)",
   editor: "Chief Editor",
-  assignment_desk: "Assignment Desk Manager",
   digital_team: "Digital Content Team",
   viewer: "Read-Only Viewer",
 };
@@ -157,6 +129,10 @@ export interface Story {
   aiSummary: string;
   aiSuggestedHeadline: string;
   tags: string[];
+  /** Reporter the story is assigned to (Octopus assignment calendar) */
+  assignedTo?: string;
+  /** ISO date — assignment deadline */
+  dueDate?: string;
 }
 
 export type Platform = "YouTube" | "Instagram" | "X (Twitter)" | "Facebook" | "LinkedIn";

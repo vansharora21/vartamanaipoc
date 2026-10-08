@@ -10,6 +10,7 @@ interface NavigationLabelProps {
   hasSubmenu?: boolean;
   isSubmenuOpen?: boolean;
   isActive?: boolean;
+  collapsed?: boolean;
   subMenuItems?: { label: string; path: string }[];
 }
 
@@ -20,9 +21,9 @@ const NavigationLabel: React.FC<NavigationLabelProps> = ({
   hasSubmenu,
   isSubmenuOpen,
   isActive,
+  collapsed,
   subMenuItems,
 }) => {
-  // Check if logo is a React element (Lucide icon) or an image source
   const isReactElement = React.isValidElement(logo);
 
   return (
@@ -30,18 +31,19 @@ const NavigationLabel: React.FC<NavigationLabelProps> = ({
       <Box
         onClick={onClick}
         sx={{
-          padding: "9px 10px",
-          margin: "4px 0",
+          padding: collapsed ? "9px 0" : "9px 10px",
+          margin: "2px 0",
           width: "100%",
           height: "40px",
           display: "flex",
           flexDirection: "row",
-          justifyContent: "left",
+          justifyContent: collapsed ? "center" : "left",
           alignItems: "center",
           backgroundColor: isActive ? "action.selected" : "transparent",
           borderRadius: "8px",
           cursor: "pointer",
           border: "1px",
+          transition: "all 0.15s ease",
           ":hover": { backgroundColor: "action.hover" },
         }}
       >
@@ -50,15 +52,12 @@ const NavigationLabel: React.FC<NavigationLabelProps> = ({
             sx={{
               width: "20px",
               height: "20px",
-              mr: 1,
+              mr: collapsed ? 0 : 1,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               color: isActive ? "text.primary" : "text.secondary",
-              "& svg": {
-                width: 20,
-                height: 20,
-              },
+              "& svg": { width: 20, height: 20 },
             }}
           >
             {logo}
@@ -70,23 +69,28 @@ const NavigationLabel: React.FC<NavigationLabelProps> = ({
             style={{
               width: "20px",
               height: "20px",
-              marginRight: "8px",
+              marginRight: collapsed ? 0 : "8px",
               filter: isActive ? "none" : "grayscale(100%)",
             }}
           />
         )}
-        <Typography
-          sx={{
-            color: isActive ? "text.primary" : "text.secondary",
-            fontWeight: isActive ? 600 : 400,
-            fontSize: "0.875rem",
-            ":hover": { color: "text.primary" },
-          }}
-        >
-          {label}
-        </Typography>
+        {!collapsed && (
+          <Typography
+            sx={{
+              color: isActive ? "text.primary" : "text.secondary",
+              fontWeight: isActive ? 600 : 400,
+              fontSize: "0.875rem",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              ":hover": { color: "text.primary" },
+            }}
+          >
+            {label}
+          </Typography>
+        )}
       </Box>
-      {hasSubmenu && isSubmenuOpen && subMenuItems && (
+      {!collapsed && hasSubmenu && isSubmenuOpen && subMenuItems && (
         <Box sx={{ ml: 6 }}>
           {subMenuItems.map((item, index) => (
             <Box

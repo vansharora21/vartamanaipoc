@@ -49,7 +49,6 @@ const SearchModal: React.FC<SearchModalProps> = ({ open, onClose }) => {
 
   const navItems = [
     { label: "Dashboard", path: "/dashboard", icon: <LayoutDashboard size={18} />, accessible: permissions.canAccessDashboard },
-    { label: "Assignment Desk", path: "/assignments", icon: <ClipboardList size={18} />, accessible: permissions.canAccessAssignmentDesk },
     { label: "Approval Portal", path: "/approval", icon: <CheckCircle size={18} />, accessible: permissions.canAccessApprovalPortal },
     { label: "Digital Dashboard", path: "/digital", icon: <BarChart3 size={18} />, accessible: permissions.canAccessDigitalDashboard },
     { label: "AI Content Review", path: "/ai-content", icon: <Sparkles size={18} />, accessible: permissions.canAccessAIContentReview },
@@ -86,7 +85,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ open, onClose }) => {
     if (filterType === "all" || filterType === "reporters") {
       reporters.forEach((r) => {
         if (r.name.toLowerCase().includes(q) || r.beat.toLowerCase().includes(q)) {
-          results.push({ label: r.name, path: "/assignments", type: "reporter" });
+          results.push({ label: r.name, path: "/approval", type: "reporter" });
         }
       });
     }

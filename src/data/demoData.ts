@@ -79,6 +79,8 @@ function generateStories(): Story[] {
     const daysAgo = randInt(0, 14);
     const date = new Date();
     date.setDate(date.getDate() - daysAgo);
+    const due = new Date(date);
+    due.setDate(due.getDate() + randInt(1, 3));
     return {
       id: `story-${i + 1}`,
       title,
@@ -92,6 +94,8 @@ function generateStories(): Story[] {
       aiSummary: AI_SUMMARIES[i % AI_SUMMARIES.length],
       aiSuggestedHeadline: AI_HEADLINES[i % AI_HEADLINES.length],
       tags: ["rajasthan", reporter.beat.toLowerCase().split(" ")[0], CATEGORIES[i % CATEGORIES.length].toLowerCase()],
+      assignedTo: reporter.name,
+      dueDate: due.toISOString(),
     };
   });
 }
@@ -268,7 +272,7 @@ export interface NewsroomData {
 }
 
 const STORAGE_KEY = "newsroom_data";
-const CURRENT_VERSION = "v3_rajasthan_matched_images";
+const CURRENT_VERSION = "v4_assignment_calendar";
 
 export function generateAndStoreData(): NewsroomData {
   const data: NewsroomData = {
